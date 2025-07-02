@@ -1,58 +1,49 @@
-const express = require('express');
-const fs = require('fs');
-const axios = require('axios');
-const ffmpeg = require('fluent-ffmpeg');
-const { v4: uuidv4 } = require('uuid');
+import express from 'express';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import dotenv from 'dotenv';
+import { Buffer } from 'buffer';
+
+dotenv.config();
 const app = express();
+app.use(express.json({ limit: '10mb' }));
 
-app.use(express.json());
-
-app.post('/merge', async (req, res) => {
-  try {
-    const { intro_url, narration_url, outro_url } = req.body;
-    const timestamp = Date.now();
-    const files = {
-      intro: `intro_${timestamp}.mp3`,
-      narration: `narration_${timestamp}.mp3`,
-      outro: `outro_${timestamp}.mp3`,
-      final: `final_${timestamp}.mp3`
-    };
-
-    const download = async (url, path) => {
-      const response = await axios({ url, method: 'GET', responseType: 'stream' });
-      return new Promise((resolve, reject) => {
-        const writer = fs.createWriteStream(path);
-        response.data.pipe(writer);
-        writer.on('finish', resolve);
-        writer.on('error', reject);
-      });
-    };
-
-    await Promise.all([
-      download(intro_url, files.intro),
-      download(narration_url, files.narration),
-      download(outro_url, files.outro)
-    ]);
-
-    ffmpeg()
-      .input(files.intro)
-      .input(files.narration)
-      .input(files.outro)
-      .on('end', () => {
-        res.sendFile(`${__dirname}/${files.final}`, {}, (err) => {
-          Object.values(files).forEach(f => fs.unlinkSync(f));
-          if (err) console.error('Send error:', err);
-        });
-      })
-      .on('error', err => {
-        console.error('FFmpeg error:', err);
-        res.status(500).send('Error processing audio');
-      })
-      .mergeToFile(files.final, './temp');
-  } catch (err) {
-    console.error('Server error:', err);
-    res.status(500).send('Server Error');
+const s3 = new S3Client({
+  region: 'auto',
+  endpoint: process.env.R2_ENDPOINT,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY,
+    secretAccessKey: process.env.R2_SECRET_KEY
   }
+});
+
+app.post('/upload-audio', async (req, res) => {
+  try {
+    const { filename, base64 } = req.body;
+
+    if (!filename || !base64) {
+      return res.status(400).json({ error: 'Missing filename or base64 data' });
+    }
+
+    const buffer = Buffer.from(base64, 'base64');
+
+    await s3.send(new PutObjectCommand({
+      Bucket: 'raw-postcast',
+      Key: filename,
+      Body: buffer,
+      ContentType: 'audio/mpeg'
+    }));
+
+    const url = `${process.env.R2_ENDPOINT}/raw-postcast/${filename}`;
+    res.json({ uploaded: true, filename, url });
+
+  } catch (err) {
+    console.error('Upload error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/status', (req, res) => {
+  res.send('Uploader is live.');
 });
 
 const PORT = process.env.PORT || 3000;
