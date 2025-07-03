@@ -31,9 +31,9 @@ app.post('/upload-audio', async (req, res) => {
       Key: filename,
       Body: buffer,
       ContentType: 'audio/mpeg'
-    }));
+    }))
 
-    const url = `${process.env.R2_ENDPOINT}/raw-postcast/${filename}`;
+    const url = `${process.env.R2_ENDPOINT}/${filename}`;
     res.json({ uploaded: true, filename, url });
 
   } catch (err) {
