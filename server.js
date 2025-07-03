@@ -59,7 +59,7 @@ const uploadToR2 = async (bucket, key, buffer) => {
 // POST /upload-audio  – single file straight into R2
 // -----------------------------------------------------------------------------
 app.post('/upload-audio', async (req, res) => {
-  const { filename, url, bucket = 'podcast-raw' } = req.body;
+  const { filename, url, bucket = 'podcast-raw-merged' } = req.body;
   if (!filename || !url) return res.status(400).json({ error: 'filename & url required' });
 
   try {
