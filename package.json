@@ -1,14 +1,16 @@
 {
-  "name": "podcast-merge-service",
+  "name": "podcast-merge",
   "version": "1.0.0",
   "type": "module",
+  "main": "index.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node index.js"
   },
   "dependencies": {
-    "express": "^4.19.0",
-    "dotenv": "^16.4.0",
+    "@aws-sdk/client-s3": "^3.574.0",
     "axios": "^1.6.8",
-    "@aws-sdk/client-s3": "^3.456.0"
+    "dotenv": "^16.5.2",
+    "express": "^4.19.2",
+    "ffmpeg-static": "^5.2.4"
   }
 }
