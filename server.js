@@ -27,7 +27,7 @@ app.post('/upload-audio', async (req, res) => {
     const buffer = Buffer.from(base64, 'base64');
 
     await s3.send(new PutObjectCommand({
-      Bucket: 'raw-postcast',
+      Bucket: 'podcast-raw-merged',
       Key: filename,
       Body: buffer,
       ContentType: 'audio/mpeg'
